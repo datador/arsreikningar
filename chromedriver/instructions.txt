@@ -1,0 +1,2 @@
+The chromedriver.exe must be suited for both the version of google chrome, as well as the platform & architecture (linux, windows, mac 32vs64x etc..)
+Link to get the drivers if a new one is needed: https://googlechromelabs.github.io/chrome-for-testing/#stable
