@@ -3,14 +3,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from src.web_setup import setup_driver
-from src.utils import unzip_files, performance_logger
+from src.utils import unzip_files
 import argparse
 
 import time
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-@performance_logger
 def process_ssn(ssn_list, start_year=2022):
     project_root = os.path.dirname(os.path.abspath(__file__))  # Rót verkefnisins
     #project_root = os.getcwd()  # Núverandi workdingdir
