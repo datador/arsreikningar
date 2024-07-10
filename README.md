@@ -96,8 +96,13 @@ arsreikningar/
 ## Skrár
 
 `main.py`: keyrir allt saman
+
 `src/web_setup.py`: Heldur utanum Selenium WebDriver uppsetningu.
+
 `src/utils.py`: Utility föll
+
 `requirements.txt`: Heldur utan um hvaða pakka þarf að ná í til að keyra.
+
 `Dockerfile`: Skilgreinir uppskrift að "Docker image" fyrir öll dependency.
+
 `README.md`: Howto og core upplýsingar
