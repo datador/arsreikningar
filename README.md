@@ -1,5 +1,5 @@
-# sjálfvirkir ársreikningar
-Skrifta til að sækja ársreikninga sjálfvirkt í gegnum Selenium
+# Sjálfvirkir Ársreikningar
+Skrifta til að sækja íslenska ársreikninga sjálfvirkt út frá breytum eins og Kennitölu og ári.
 
 ## Uppsetning
 
@@ -42,8 +42,6 @@ python main.py --ssn_list 1234567890 0987654321 --path C:/arsreikningar/data --u
 
 python main.py --ssn_list 1234567890 0987654321 --start_year 2020 --path C:/arsreikningar/data --unzip true
 ```
-
-Skriftan vinnur sem er á einum þræði og ýtrar því kennitölulistann..
 
 ## Docker
 
