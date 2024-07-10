@@ -1,5 +1,6 @@
 
 import os
+import platform
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
@@ -27,9 +28,12 @@ def setup_driver(download_dir, headless=True):
     # Reyna nota local ChromeDriver first, annars sækja..
     # Hægt að ná í hér: https://googlechromelabs.github.io/chrome-for-testing/#stable
     #chrome_driver_path = "C:/repos/rsk/chromedriver/chromedriver.exe" ## breyta í dýnamískt path frá rót
-
+    postfix=''
+    if platform.system().upper() == 'WINDOWS':
+        postfix = '.exe'
+    
     root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-    chrome_driver_path = os.path.join(root_dir, 'chromedriver', 'chromedriver.exe')
+    chrome_driver_path = os.path.join(root_dir, 'chromedriver', 'chromedriver'+postfix)
     logging.info(f"Chromedriver path: {chrome_driver_path}")
     if os.path.exists(chrome_driver_path):
         service = Service(chrome_driver_path)
