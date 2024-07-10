@@ -29,8 +29,11 @@ python main.py --ssn_list KENNITALA_1 KENNITALA_2 ... KENNITALA_N
 ### Breytur
 
 `--ssn_list`: kennitala/tölur aðskildar með bili (required).
+
 `--start_year`: upphafsár sem skriftan sækir, ef ekkert er tilgreint er default á "None" sem tekur nýjasta ársreikninginn stakann (default: `None`).
+
 `--path`: Absolute path til þess að skila gögnunum í, defaultast á rót/data (default: `./data`).
+
 `--unzip`: Boolean gildi til að unzippa, skilgreina þarf með false ef ekki á að unzippa (default: `true`).
 
 ### Dæmi
