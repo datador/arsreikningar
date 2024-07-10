@@ -3,18 +3,29 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from src.web_setup import setup_driver
-from src.utils import unzip_files
+from src.utils import unzip_files, wait_for_zip_file, str2bool
 import argparse
-
-import time
+from selenium.common.exceptions import TimeoutException
 import logging
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def process_ssn(ssn_list, start_year=2022):
-    project_root = os.path.dirname(os.path.abspath(__file__))  # Rót verkefnisins
-    #project_root = os.getcwd()  # Núverandi workdingdir
-    download_dir = os.path.join(project_root, "data")  # Setja download directory innan verkefnis
-    os.makedirs(download_dir, exist_ok=True)  # Búa til ef ekki til
+def process_ssn(ssn_list, start_year=2022, path=None, unzip=True):
+    if path == None:
+        project_root = os.path.dirname(os.path.abspath(__file__))  # Rót verkefnisins
+        #project_root = os.getcwd()  # Núverandi workdingdir
+        download_dir = os.path.join(project_root, "data")  # Setja download directory innan verkefnis
+        logging.info(f"Setting download_dir: {download_dir}")
+        os.makedirs(download_dir, exist_ok=True)  # Búa til ef ekki til
+    else:
+        # Er þetta absolute path??
+        if not os.path.isabs(path):
+            raise ValueError(f"Path is not absolute: {path}")
+        
+        download_dir = os.path.normpath(path)  # Normalize the path
+        logging.info(f"Setting download_dir: {download_dir}")
+        os.makedirs(download_dir, exist_ok=True)
+
 
     driver = setup_driver(download_dir)
     wait = WebDriverWait(driver, 10)
@@ -27,27 +38,32 @@ def process_ssn(ssn_list, start_year=2022):
 
             # Finna og smella á "show more" til að útvíkka
             collapse_link = wait.until(EC.element_to_be_clickable((By.XPATH, '//a[@class="secure" and contains(text(), "Gögn úr ársreikningaskrá")]')))
-            logging.info(f"Collapse link found, about to click. {collapse_link}")
+            logging.debug(f"Collapse link found, about to click. {collapse_link}")
             collapse_link.click()
-            logging.info(f"Fyrsti klikk takki") 
             # Bíða eftir að taflan verði sjáanleg eftir að víkkað er út
             wait.until(EC.visibility_of_element_located((By.XPATH, '//table[@class="annualTable"]')))
             
             # Byggja XPath fyrirspurn fyrir relevant ár og data_id (ársreikninga)
             xpath_query = f'//table[@class="annualTable"]/tbody/tr[td[1][contains(text(), "{start_year}") or number(text()) > {start_year}] and td[5][@data-typeid="1"]]'
-            logging.info(f"xpath query: {xpath_query}") 
+            logging.debug(f"xpath query: {xpath_query}") 
 
             rows = driver.find_elements(By.XPATH, xpath_query)
-            for row in rows:
-                year_text = row.find_element(By.XPATH, './td[1]').text.strip()
-                logging.info(f"Útdreginn árstexti: {year_text}") 
-                
-                purchase_link = row.find_element(By.XPATH, './td[5]/a[@class="tocart"]')
-                purchase_link.click()
-                time.sleep(5)  # Leyfa tíma fyrir vöruna að bætast við körfu ### SETJA Á XPATH/EHV ELEMENT EN EKKI SLEEP
+            try:
+                for row in rows:
+                    year_element = row.find_element(By.CSS_SELECTOR, 'td:first-child')
+                    year = int(year_element.text.strip())
+                    if year >= start_year:
+                        data_type_element = row.find_element(By.CSS_SELECTOR, 'td:nth-child(5)')
+                        if data_type_element.get_attribute('data-typeid') == '1':
+                            logging.info(f"Processing year: {year}")
+                            purchase_link = data_type_element.find_element(By.CSS_SELECTOR, 'a.tocart')
+                            driver.execute_script("arguments[0].click();", purchase_link)
+                        
+            except TimeoutException:
+                logging.warning(f"Timeout waiting for purchase link: {purchase_link}")
         
         except Exception as e:
-            logging.info(f"Villa við vinnslu {ssn}: {e}")
+            logging.info(f"General error {ssn}: {e}")
     
     # Fara í "körfu" og ljúka kaupum
     try:
@@ -55,20 +71,30 @@ def process_ssn(ssn_list, start_year=2022):
         cart_link.click()
         wait.until(EC.element_to_be_clickable((By.ID, "MainContent_btnKaupa"))).click()
         wait.until(EC.element_to_be_clickable((By.ID, "MainContent_ucVoruGrid_btnSaekjaAllarVorur"))).click()
-        time.sleep(2)  # Bíða eftir að zip skrániðurhal hefjist
     except Exception as e:
-        logging.info(f"Villa við að ljúka kaupum: {e}")
+        logging.info(f"Error in finalizing cart: {e}")
+        raise
     
-    # BÍÐA EFTIR DOWNLOADI
-    time.sleep(3)
-    driver.quit()
-    unzip_files(download_dir)
+
+    try:
+        wait_for_zip_file(download_dir, scan_interval=0.4)
+    except TimeoutException as e:
+        logging.info(f"Error waiting for zip file to download: {e}")
+        
+    if unzip:
+        logging.info("unzipping files...")    
+        driver.quit()
+        unzip_files(download_dir)
+    else:
+        logging.info("Not unzipping...")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process SSN list and start year.')
     parser.add_argument('--ssn_list', nargs='+', help='List of SSNs to process', required=True)
     parser.add_argument('--start_year', default=2022, type=int, help='Start year for filtering data', required=False)
+    parser.add_argument('--path', default=None, type=str, help='Path to save the data', required=False)
+    parser.add_argument('--unzip', type=str2bool, default=True, help='unzip=true unzips the data', required=False)
     
     args = parser.parse_args()
 
-    process_ssn(args.ssn_list, args.start_year)
+    process_ssn(args.ssn_list, args.start_year, args.path, args.unzip)
