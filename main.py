@@ -10,7 +10,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def process_ssn(ssn_list, start_year=2022, path=None, unzip=True):
+def process_ssn(ssn_list, start_year=None, path=None, unzip=True):
     if path == None:
         project_root = os.path.dirname(os.path.abspath(__file__))  # Rót verkefnisins
         #project_root = os.getcwd()  # Núverandi workdingdir
@@ -25,7 +25,6 @@ def process_ssn(ssn_list, start_year=2022, path=None, unzip=True):
         download_dir = os.path.normpath(path)  # Normalize the path
         logging.info(f"Setting download_dir: {download_dir}")
         os.makedirs(download_dir, exist_ok=True)
-
 
     driver = setup_driver(download_dir)
     wait = WebDriverWait(driver, 10)
@@ -42,7 +41,21 @@ def process_ssn(ssn_list, start_year=2022, path=None, unzip=True):
             collapse_link.click()
             # Bíða eftir að taflan verði sjáanleg eftir að víkkað er út
             wait.until(EC.visibility_of_element_located((By.XPATH, '//table[@class="annualTable"]')))
-            
+
+            if start_year == None:
+                years = []
+                year_elements = driver.find_elements(By.XPATH, '//table[@class="annualTable"]/tbody/tr/td[1]')
+                for year_element in year_elements:
+                    year_text = year_element.text.strip()
+                    if year_text.isdigit():
+                        years.append(int(year_text))
+                if years:
+                    start_year = max(years)
+                    logging.info(f"Latest year determined: {start_year}")
+                else:
+                    logging.warning("No valid years found. Skipping SSN.")
+                    continue
+
             # Byggja XPath fyrirspurn fyrir relevant ár og data_id (ársreikninga)
             xpath_query = f'//table[@class="annualTable"]/tbody/tr[td[1][contains(text(), "{start_year}") or number(text()) > {start_year}] and td[5][@data-typeid="1"]]'
             logging.debug(f"xpath query: {xpath_query}") 
@@ -74,7 +87,6 @@ def process_ssn(ssn_list, start_year=2022, path=None, unzip=True):
     except Exception as e:
         logging.info(f"Error in finalizing cart: {e}")
         raise
-    
 
     try:
         wait_for_zip_file(download_dir, scan_interval=0.4)
@@ -91,7 +103,7 @@ def process_ssn(ssn_list, start_year=2022, path=None, unzip=True):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process SSN list and start year.')
     parser.add_argument('--ssn_list', nargs='+', help='List of SSNs to process', required=True)
-    parser.add_argument('--start_year', default=2022, type=int, help='Start year for filtering data', required=False)
+    parser.add_argument('--start_year', default=None, type=int, help='Start year for filtering data or "latest" for the most recent year', required=False)
     parser.add_argument('--path', default=None, type=str, help='Path to save the data', required=False)
     parser.add_argument('--unzip', type=str2bool, default=True, help='unzip=true unzips the data', required=False)
     
